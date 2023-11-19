@@ -29,40 +29,84 @@ pub fn solve(input: String) {
     while problems != i {
         println!("Řeším {}. z {} problémů...", i + 1, problems);
 
+        let pairs: &str = splitted[line_pointer];
+        let pairs: u32 = pairs.parse().unwrap();
         line_pointer += 1;
 
-        let data: Vec<i32> = splitted[line_pointer]
+        let iter = splitted[line_pointer]
             .split(" ")
-            .map(|d| d.parse::<i32>().unwrap())
-            .collect();
+            .map(|d| d.parse::<i64>().unwrap());
 
         line_pointer += 1;
+
+        let mut distance: u64 = 0;
+        let mut position: usize = 0;
+        let mut collected_pairs: u32 = 0;
+
+        let mut cache: HashMap<i64, Vec<usize>> = HashMap::new();
+        let mut data: Vec<i64> = vec![];
 
         let mut j = 0;
-        let mut records = 0;
 
-        //println!("{:?}", data);
-
-        let mut previous_max = 0;
-
-        while data.len() > j {
-            if j != 0 {
-                if data[j - 1] > previous_max {
-                    previous_max = data[j - 1];
-                }
+        for e in iter {
+            if cache.contains_key(&e) {
+                cache.get_mut(&e).unwrap_or(&mut vec![]).push(j);
+            } else {
+                cache.insert(e, vec![j]);
             }
-
-            //println!("{}", previous);
-            //println!("{}", records);
-
-            if data[j] > previous_max {
-                records += 1;
-            }
-
+            data.push(e);
             j += 1;
         }
 
-        out += &format!("{:?}\n", records);
+        let start = Instant::now();
+
+        while collected_pairs < pairs {
+            // println!("data: {:?}", data);
+            let colour = data[position];
+
+            data[position] = -colour;
+
+            //println!("pos: {}, data: {:?}", position, data);
+            //println!("colour: {}", colour);
+            let next_pos = cache.get(&colour).unwrap()[1];
+            /*let next_pos = data[position..]
+            .iter()
+            .position(|x| x == &colour)
+            .unwrap_or(0)
+            + position;*/
+
+            distance += ((position as i64) - (next_pos as i64)).abs() as u64;
+
+            //println!("next: {}", next_pos);
+
+            data[next_pos] = -colour;
+
+            let new_position = data[position..]
+                .iter()
+                .position(|x| x > &0)
+                .unwrap_or(next_pos - position)
+                + position;
+
+            //println!("new: {}", new_position);
+
+            distance += ((next_pos as i64) - (new_position as i64)).abs() as u64;
+
+            position = new_position;
+
+            collected_pairs += 1;
+
+            if collected_pairs % 10000 == 0 {
+                println!(
+                    "problem {}, remaining: {}, ETA: {:?}",
+                    i,
+                    pairs - collected_pairs,
+                    (start.elapsed() / collected_pairs) * (pairs - collected_pairs)
+                );
+            }
+            //println!("distance: {}", distance);
+        }
+
+        out += &format!("{:?}\n", distance);
 
         i += 1;
         println!("Vyřešeno {} z {} problémů...", i, problems);
